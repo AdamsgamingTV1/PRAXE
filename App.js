@@ -29,7 +29,7 @@ const App = () => {
     const width = 800;
     const height = 200;
     const svg = svgContainer;
-    
+
     while (svg.firstChild) {
       svg.removeChild(svg.firstChild);
     }
@@ -57,40 +57,51 @@ const App = () => {
     });
   };
 
+  const togglePower = () => {
+    const powerButton = document.getElementById('powerButton');
+    const isOn = powerButton.classList.contains('on');
+    powerButton.classList.toggle('on', !isOn);
+    powerButton.textContent = isOn ? 'OFF' : 'ON';
+  };
+
   return (
     <div className="App">
-      <h1>Pulse Profile Generator</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>T1 (ms): </label>
-          <input type="number" ref={(input) => T1 = input} />
-        </div>
-        <div>
-          <label>T2 (ms): </label>
-          <input type="number" ref={(input) => T2 = input} />
-        </div>
-        <div>
-          <label>T3 (ms): </label>
-          <input type="number" ref={(input) => T3 = input} />
-        </div>
-        <div>
-          <label>T4 (ms): </label>
-          <input type="number" ref={(input) => T4 = input} />
-        </div>
-        <div>
-          <label>Burst: </label>
-          <input type="number" ref={(input) => burst = input} />
-        </div>
-        <div>
-          <label>Polarity: </label>
-          <select ref={(select) => polarity = select}>
-            <option value="B">Bipolar</option>
-            <option value="P">Unipolar Positive</option>
-            <option value="N">Unipolar Negative</option>
-          </select>
-        </div>
-        <button type="submit">Generate Profile</button>
-      </form>
+      <div className="controls">
+        <button id="powerButton" onClick={togglePower} className="round-button">OFF</button>
+        <form onSubmit={handleSubmit}>
+          <div className="input-row">
+            <div className="input-group">
+              <label>T1 (ms): </label>
+              <input type="number" ref={(input) => T1 = input} />
+            </div>
+            <div className="input-group">
+              <label>T2 (ms): </label>
+              <input type="number" ref={(input) => T2 = input} />
+            </div>
+            <div className="input-group">
+              <label>T3 (ms): </label>
+              <input type="number" ref={(input) => T3 = input} />
+            </div>
+            <div className="input-group">
+              <label>T4 (ms): </label>
+              <input type="number" ref={(input) => T4 = input} />
+            </div>
+          </div>
+          <div className="input-group">
+            <label>Burst: </label>
+            <input type="number" ref={(input) => burst = input} />
+          </div>
+          <div className="input-group">
+            <label>Polarity: </label>
+            <select ref={(select) => polarity = select}>
+              <option value="B">Bipolar</option>
+              <option value="P">Unipolar Positive</option>
+              <option value="N">Unipolar Negative</option>
+            </select>
+          </div>
+          <button type="submit">Generate Profile</button>
+        </form>
+      </div>
       <svg ref={(el) => svgContainer = el} width="800" height="200"></svg>
     </div>
   );
