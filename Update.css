@@ -1,0 +1,122 @@
+import React from 'react';
+import './App.css';
+
+const App = () => {
+  let T1, T2, T3, T4, polarity;
+  const svgRef = (null);
+  const [burst, setBurst] = React.useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const T1Value = T1.value;
+    const T2Value = T2.value;
+    const T3Value = T3.value;
+    const T4Value = T4.value;
+    const polarityValue = polarity.value;
+    const burstValue = burst ? 1 : 0;
+
+    const response = await fetch('http://localhost:5000/generate_profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ T1: T1Value, T2: T2Value, T3: T3Value, T4: T4Value, burst: burstValue, polarity: polarityValue })
+    });
+    const profileData = await response.json();
+    drawProfile(profileData);
+  };
+
+  const drawProfile = (profile) => {
+    const svg = svgRef.current;
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    const barWidth = width / profile.length;
+
+    const maxDuration = Math.max(...profile.map(segment => segment.duration));
+    const scaleY = height / maxDuration;
+
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+
+    profile.forEach((segment, index) => {
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const x = index * barWidth;
+      const y = height - segment.duration * scaleY;
+      const rectHeight = segment.duration * scaleY;
+      const color = segment.type === 'Positive Pulse' ? 'blue' : (segment.type === 'Negative Pulse' ? 'red' : 'gray');
+
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', barWidth);
+      rect.setAttribute('height', rectHeight);
+      rect.setAttribute('fill', color);
+
+      svg.appendChild(rect);
+    });
+  };
+
+  const togglePower = () => {
+    const powerButton = document.getElementById('powerButton');
+    const isOn = powerButton.classList.contains('on');
+    powerButton.classList.toggle('on', !isOn);
+    powerButton.textContent = isOn ? 'OFF' : 'ON';
+  };
+
+  return (
+    <div className="App">
+      <nav className="navbar">
+        <div className="container">
+        <button id="powerButton" onClick={togglePower} className={`round-button ${burst ? 'on' : 'off'}`}>{burst ? 'ON' : 'OFF'}</button>
+        </div>
+      </nav>
+      <div className="content">
+        <form onSubmit={handleSubmit} className="profile-form">
+          <div className="input-row">
+            <div className="input-group">
+              <label>T1 (ms): </label>
+              <input type="number" ref={(input) => T1 = input} />
+            </div>
+            <div className="input-group">
+              <label>T2 (ms): </label>
+              <input type="number" ref={(input) => T2 = input} />
+            </div>
+            <div className="input-group">
+              <label>T3 (ms): </label>
+              <input type="number" ref={(input) => T3 = input} />
+            </div>
+            <div className="input-group">
+              <label>T4 (ms): </label>
+              <input type="number" ref={(input) => T4 = input} />
+            </div>
+          </div>
+        <button type='submit'>Save</button>
+        <div>
+        <button type='submit'>Load</button>
+        </div>
+        <button type='submit'>POSITIVE</button>
+        <div>
+        <button type='submit'>BIPOLAR</button>
+        <div>
+        <button type='submit'>NEGATIVE</button>  
+        </div>
+        <div className="input-group">
+              <label>Burst: </label>
+              <label className="switch">
+                <input type="checkbox" checked={burst} onChange={() => setBurst(!burst)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
+        </form>
+        <div className="controls">
+        </div>
+        <footer className="footer">
+        © 2024 Pulse Profile Generator
+      </footer>
+      </div>
+    </div>
+  );
+};
+
+export default App;
