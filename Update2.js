@@ -1,0 +1,211 @@
+import React, { useState, useRef, useEffect } from 'react';
+import './App.css';
+
+const Line = ({ direction }) => {
+  let animateProps;
+  let color;
+  let x1, x2, y1, y2;
+
+  switch (direction) {
+    case 'bipolar':
+      animateProps = { attributeName: "x2", from: "0", to: "90%" };
+      color = 'blue';
+      break;
+    case 'unipolar':
+      animateProps = { attributeName: "y2", from: "100%", to: "0" };
+      color = 'green';
+      x1 = "50%";
+      x2 = "50%";
+      y1 = "100";
+      y2 = "7";
+      break;
+    case 'negative':
+      animateProps = { attributeName: "y1", from: "0", to: "100%" };
+      color = 'red';
+      x1 = "50%";
+      x2 = "50%";
+      y1 = "100";
+      y2 = "0";
+      break;
+    case 'yellow':
+      animateProps = { attributeName: "y1", from: "0", to: "100%" };
+      color = 'yellow';
+      break;
+    default:
+      return null;
+  }
+
+  return (
+    <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <line x1={x1} y1={y1} x2={x2} y2={y2} style={{ stroke: color, strokeWidth: 5 }}>
+        <animate
+          attributeName={animateProps.attributeName}
+          begin="0s"
+          dur="8s"
+          from={animateProps.from}
+          to={animateProps.to}
+          repeatCount="indefinite" />
+      </line>
+    </svg>
+  );
+};
+
+const App = () => {
+  let T1, T2, T3, T4, polarity;
+  const svgRef = useRef(null);
+  const [burst, setBurst] = useState(false);
+  const [lines, setLines] = useState([]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const saveData = () => {
+    const dataToSave = { T1: T1.value, T2: T2.value, T3: T3.value, T4: T4.value, polarity: polarity.value, burst: burst };
+    localStorage.setItem('profileData', JSON.stringify(dataToSave));
+  };
+
+  const loadData = () => {
+    const savedData = JSON.parse(localStorage.getItem('profileData'));
+    if (savedData) {
+      T1.value = savedData.T1;
+      T2.value = savedData.T2;
+      T3.value = savedData.T3;
+      T4.value = savedData.T4;
+      polarity.value = savedData.polarity;
+      setBurst(savedData.burst);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    saveData();
+    const burstValue = burst ? 1 : 0;
+
+    const response = await fetch('http://localhost:5000/generate_profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ T1: T1.value, T2: T2.value, T3: T3.value, T4: T4.value, burst: burstValue, polarity: polarity.value })
+    });
+    const profileData = await response.json();
+    drawProfile(profileData);
+  };
+
+  const drawProfile = (profile) => {
+    const svg = svgRef.current;
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    const barWidth = width / profile.length;
+
+    const maxDuration = Math.max(...profile.map(segment => segment.duration));
+    const scaleY = height / maxDuration;
+
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+
+    profile.forEach((segment, index) => {
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      const x = index * barWidth;
+      const y = height - segment.duration * scaleY;
+      const rectHeight = segment.duration * scaleY;
+      const color = segment.type === 'Positive Pulse' ? 'blue' : (segment.type === 'Negative Pulse' ? 'red' : 'gray');
+
+      rect.setAttribute('x', x);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', barWidth);
+      rect.setAttribute('height', rectHeight);
+      rect.setAttribute('fill', color);
+
+      svg.appendChild(rect);
+    });
+  };
+
+  const togglePower = () => {
+    const powerButton = document.getElementById('powerButton');
+    const isOn = powerButton.classList.contains('on');
+    powerButton.classList.toggle('on', !isOn);
+    powerButton.textContent = isOn ? 'OFF' : 'ON';
+    if (!isOn) {
+      handleToggleAllLines();
+    }
+  };
+
+  const handleToggleLine = (direction) => {
+    setLines((prevLines) => {
+      if (prevLines.includes(direction)) {
+        return prevLines.filter((line) => line !== direction);
+      } else {
+        return [...prevLines, direction];
+      }
+    });
+  };
+
+  const handleToggleAllLines = () => {
+    setLines(['bipolar', 'unipolar', 'negative', 'yellow']);
+  };
+
+  return (
+    <div className="App">
+      <nav className="navbar">
+        <div className="container">
+          <button id="powerButton" onClick={togglePower} className={`round-button ${burst ? 'on' : 'off'}`}>{burst ? 'ON' : 'OFF'}</button>
+        </div>
+      </nav>
+      <div className="content">
+        <form onSubmit={handleSubmit} className="profile-form">
+          <div className="input-row">
+            <div className="input-group">
+              <label>T1 (ms): </label>
+              <input type="number" ref={(input) => T1 = input} />
+            </div>
+            <div className="input-group">
+              <label>T2 (ms): </label>
+              <input type="number" ref={(input) => T2 = input} />
+            </div>
+            <div className="input-group">
+              <label>T3 (ms): </label>
+              <input type="number" ref={(input) => T3 = input} />
+            </div>
+            <div className="input-group">
+              <label>T4 (ms): </label>
+              <input type="number" ref={(input) => T4 = input} />
+            </div>
+            <div className="input-group">
+              <label>Polarity: </label>
+              <input type="number" ref={(input) => polarity = input} />
+            </div>
+          </div>
+          <button type='submit'>Save</button>
+          <button type='button' onClick={loadData}>Load</button>
+          <div className="controls">
+            <button type='button' onClick={() => handleToggleLine('unipolar')}>POSITIVE</button>
+            <button type='button' onClick={() => handleToggleLine('bipolar')}>BIPOLAR</button>
+            <button type='button' onClick={() => handleToggleLine('negative')}>NEGATIVE</button>
+            <button type='button' onClick={() => handleToggleLine('yellow')}>YELLOW</button>
+          </div>
+          <div className="input-group">
+            <label>Burst: </label>
+            <label className="switch">
+              <input type="checkbox" checked={burst} onChange={() => setBurst(!burst)} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+        </form>
+        <footer className="footer">
+          © 2024 Pulse Profile Generator
+        </footer>
+        <div id="display" className="display">
+          {lines.map((direction, index) => (
+            <Line key={index} direction={direction} />
+          ))}
+        </div>
+        <svg ref={svgRef} width="100%" height="200" className="profile-svg"></svg>
+      </div>
+    </div>
+  );
+};
+
+export default App;
